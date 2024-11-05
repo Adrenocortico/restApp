@@ -1,174 +1,179 @@
 import React, { useState } from 'react';
 import { Trash2, Plus, Calculator } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from './components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Button } from './components/ui/button';
-import { Input } from './components/ui/input';
-import { Alert, AlertDescription } from './components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
+import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
+import { Alert, AlertDescription } from "./components/ui/alert";
+
 
 const MaltaCalculator = () => {
-  // ... [stato e funzioni rimangono uguali] ...
+  const [ingredients, setIngredients] = useState([
+    { name: '', doses: '', type: '', category: '' }
+  ]);
+  const [multiplier, setMultiplier] = useState(1);
+  const [targetRatio, setTargetRatio] = useState('');
+  const [lockType, setLockType] = useState('inerte');
+  const [result, setResult] = useState(null);
+
+  const calculateCurrentRatio = () => {
+    const legante = ingredients.reduce((acc, curr) =>
+      curr.category === 'legante' ? acc + Number(curr.doses) : acc, 0);
+    const inerte = ingredients.reduce((acc, curr) =>
+      curr.category === 'inerte' ? acc + Number(curr.doses) : acc, 0);
+    return `${legante}:${inerte}`;
+  };
+
+  const addIngredient = () => {
+    setIngredients([...ingredients, { name: '', doses: '', type: '', category: '' }]);
+  };
+
+  const removeIngredient = (index) => {
+    setIngredients(ingredients.filter((_, i) => i !== index));
+  };
+
+  const updateIngredient = (index, field, value) => {
+    const newIngredients = [...ingredients];
+    newIngredients[index] = { ...newIngredients[index], [field]: value };
+    setIngredients(newIngredients);
+  };
+
+  const calculateNewRatios = () => {
+    if (!targetRatio || !targetRatio.includes(':')) {
+      setResult({ error: 'Inserire un rapporto valido (es. 2:1)' });
+      return;
+    }
+
+    const [targetLegante, targetInerte] = targetRatio.split(':').map(Number);
+    const currentLegante = ingredients.reduce((acc, curr) =>
+      curr.category === 'legante' ? acc + Number(curr.doses) : acc, 0);
+    const currentInerte = ingredients.reduce((acc, curr) =>
+      curr.category === 'inerte' ? acc + Number(curr.doses) : acc, 0);
+
+    let newIngredients = [...ingredients];
+    if (lockType === 'inerte') {
+      const newLegante = (currentInerte * targetLegante) / targetInerte;
+      const factor = newLegante / currentLegante;
+      newIngredients = ingredients.map(ing => ({
+        ...ing,
+        doses: ing.category === 'legante' ? (Number(ing.doses) * factor).toFixed(2) : ing.doses
+      }));
+    } else {
+      const newInerte = (currentLegante * targetInerte) / targetLegante;
+      const factor = newInerte / currentInerte;
+      newIngredients = ingredients.map(ing => ({
+        ...ing,
+        doses: ing.category === 'inerte' ? (Number(ing.doses) * factor).toFixed(2) : ing.doses
+      }));
+    }
+
+    setResult({
+      originalRatio: calculateCurrentRatio(),
+      newRatio: targetRatio,
+      ingredients: newIngredients
+    });
+  };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto bg-white shadow-lg">
-      <CardHeader className="border-b bg-gray-50">
-        <CardTitle className="text-2xl text-center text-gray-800">
-          Calcolatore Rapporti Malta
-        </CardTitle>
+    <Card className="w-full max-w-3xl mx-auto">
+      <CardHeader>
+        <CardTitle>Calcolatore Rapporti Malta</CardTitle>
       </CardHeader>
-      <CardContent className="p-6">
-        <div className="space-y-6">
-          {/* Intestazioni */}
-          <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-600 mb-2">
-            <div className="col-span-3">Nome Ingrediente</div>
-            <div className="col-span-2">Dosi</div>
-            <div className="col-span-3">Tipo</div>
-            <div className="col-span-3">Categoria</div>
-            <div className="col-span-1"></div>
-          </div>
+      <CardContent>
+        <div className="space-y-4">
+          {ingredients.map((ing, index) => (
+            <div key={index} className="flex gap-2 items-center">
+              <Input
+                placeholder="Nome"
+                value={ing.name}
+                onChange={(e) => updateIngredient(index, 'name', e.target.value)}
+                className="flex-1"
+              />
+              <Input
+                type="number"
+                placeholder="Dosi"
+                value={ing.doses}
+                onChange={(e) => updateIngredient(index, 'doses', e.target.value)}
+                className="w-24"
+              />
+              <Select
+                value={ing.type}
+                onValueChange={(value) => updateIngredient(index, 'type', value)}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="marmo">Marmo</SelectItem>
+                  <SelectItem value="calce">Calce</SelectItem>
+                  <SelectItem value="sabbia">Sabbia</SelectItem>
+                  <SelectItem value="pozzolana">Pozzolana</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={ing.category}
+                onValueChange={(value) => updateIngredient(index, 'category', value)}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="legante">Legante</SelectItem>
+                  <SelectItem value="inerte">Inerte</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={() => removeIngredient(index)}
+                disabled={ingredients.length === 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
 
-          {/* Lista Ingredienti */}
-          <div className="space-y-4">
-            {ingredients.map((ing, index) => (
-              <div key={index} className="grid grid-cols-12 gap-4 items-center">
-                <div className="col-span-3">
-                  <Input
-                    placeholder="Nome"
-                    value={ing.name}
-                    onChange={(e) => updateIngredient(index, 'name', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Input
-                    type="number"
-                    placeholder="Dosi"
-                    value={ing.doses}
-                    onChange={(e) => updateIngredient(index, 'doses', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="col-span-3">
-                  <Select
-                    value={ing.type}
-                    onValueChange={(value) => updateIngredient(index, 'type', value)}
-                  >
-                    <SelectTrigger className="w-full px-3 py-2 border rounded-lg">
-                      <SelectValue placeholder="Seleziona tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="marmo">Marmo</SelectItem>
-                      <SelectItem value="calce">Calce</SelectItem>
-                      <SelectItem value="sabbia">Sabbia</SelectItem>
-                      <SelectItem value="pozzolana">Pozzolana</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-3">
-                  <Select
-                    value={ing.category}
-                    onValueChange={(value) => updateIngredient(index, 'category', value)}
-                  >
-                    <SelectTrigger className="w-full px-3 py-2 border rounded-lg">
-                      <SelectValue placeholder="Seleziona categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="legante">Legante</SelectItem>
-                      <SelectItem value="inerte">Inerte</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-1">
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => removeIngredient(index)}
-                    disabled={ingredients.length === 1}
-                    className="p-2 text-red-600 hover:bg-red-100 rounded-lg"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Pulsante Aggiungi */}
-          <Button
-            onClick={addIngredient}
-            className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg flex items-center justify-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
+          <Button onClick={addIngredient} className="w-full">
+            <Plus className="h-4 w-4 mr-2" />
             Aggiungi Ingrediente
           </Button>
 
-          {/* Controlli Rapporto */}
-          <div className="grid grid-cols-2 gap-4 mt-8">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Rapporto Desiderato</label>
+          <div className="flex gap-4 mt-6">
+            <div className="flex-1">
               <Input
-                placeholder="es. 2:1"
+                placeholder="Rapporto desiderato (es. 2:1)"
                 value={targetRatio}
                 onChange={(e) => setTargetRatio(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Blocca</label>
-              <Select value={lockType} onValueChange={setLockType}>
-                <SelectTrigger className="w-full px-3 py-2 border rounded-lg">
-                  <SelectValue placeholder="Scegli cosa bloccare" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="inerte">Blocca Inerti</SelectItem>
-                  <SelectItem value="legante">Blocca Leganti</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={lockType} onValueChange={setLockType}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Blocca" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="inerte">Blocca Inerti</SelectItem>
+                <SelectItem value="legante">Blocca Leganti</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Pulsante Calcola */}
-          <Button
-            onClick={calculateNewRatios}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg mt-6 flex items-center justify-center gap-2"
-          >
-            <Calculator className="h-5 w-5" />
+          <Button onClick={calculateNewRatios} className="w-full">
+            <Calculator className="h-4 w-4 mr-2" />
             Calcola Nuovo Rapporto
           </Button>
 
-          {/* Risultati */}
           {result && !result.error && (
-            <Alert className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <Alert>
               <AlertDescription>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="font-medium">Rapporto originale:</span>
-                      <span className="ml-2">{result.originalRatio}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium">Nuovo rapporto:</span>
-                      <span className="ml-2">{result.newRatio}</span>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-lg mb-2">Nuove dosi:</h4>
-                    <ul className="space-y-2">
+                <div className="space-y-2">
+                  <p>Rapporto originale: {result.originalRatio}</p>
+                  <p>Nuovo rapporto: {result.newRatio}</p>
+                  <div className="mt-4">
+                    <h4 className="font-semibold">Nuove dosi:</h4>
+                    <ul className="list-disc pl-4">
                       {result.ingredients.map((ing, i) => (
-                        <li key={i} className="flex justify-between items-center border-b pb-2">
-                          <span>{ing.name}</span>
-                          <span className="font-medium">{ing.doses} dosi</span>
+                        <li key={i}>
+                          {ing.name}: {ing.doses} dosi
                         </li>
                       ))}
                     </ul>
@@ -179,10 +184,8 @@ const MaltaCalculator = () => {
           )}
 
           {result?.error && (
-            <Alert className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
-              <AlertDescription className="text-red-600">
-                {result.error}
-              </AlertDescription>
+            <Alert variant="destructive">
+              <AlertDescription>{result.error}</AlertDescription>
             </Alert>
           )}
         </div>
