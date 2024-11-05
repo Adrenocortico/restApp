@@ -5,7 +5,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from './components/ui/card';
 import {
   Select,
   SelectContent,
@@ -13,9 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
+import { Alert, AlertDescription } from './components/ui/alert';
 
 const MaltaCalculator = () => {
   // ... [stato e funzioni rimangono uguali] ...
